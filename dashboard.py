@@ -1,93 +1,136 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
-import streamlit.components.v1 as components # O TRUQUE ESTÁ AQUI
+from streamlit_excalidraw import excalidraw
+from streamlit_sortables import sort_items
 
-# --- CONFIGURAÇÃO ---
-st.set_page_config(page_title="Fluentli Hub", page_icon="🚀", layout="wide")
+# --- 1. CONFIGURAÇÃO E CSS PROFISSIONAL (O VISUAL QUE VOCÊ GOSTA) ---
+st.set_page_config(page_title="Fluentli Ultimate Hub", page_icon="🧠", layout="wide")
 
-# --- ESTILO ---
 st.markdown("""
 <style>
+    /* Fundo Dark Profissional */
     .stApp { background-color: #0E1117; }
-    .kanban-card { background-color: #262730; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #555; color: white; }
-    .status-todo { border-left-color: #FF4B4B; }
-    .status-doing { border-left-color: #FFAA00; }
-    .status-done { border-left-color: #00CC96; }
+    
+    /* Estilo dos Textos */
+    h1, h2, h3 { color: #4F8BF9 !important; font-family: 'Roboto', sans-serif; }
+    
+    /* Ajuste para o componente de Kanban ficar bonito */
+    div[data-testid="stVerticalBlock"] > div {
+        background-color: transparent;
+    }
+    
+    /* Cards de Métricas */
+    .metric-box {
+        background: #1E1E1E;
+        border: 1px solid #333;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- DADOS (MEMÓRIA) ---
-if 'kanban_db' not in st.session_state:
-    st.session_state.kanban_db = [
-        {"id": 1, "task": "Interface Neon", "status": "Feito", "tag": "Front"},
-        {"id": 2, "task": "Dashboard Whiteboard", "status": "Fazendo", "tag": "Gestão"},
-    ]
-if 'mvp_text' not in st.session_state:
-    st.session_state.mvp_text = "Documentação do MVP:\n1. Backend processa áudio...\n2. IA corrige..."
+# --- 2. MEMÓRIA (SESSION STATE) ---
+# Inicializa as colunas do Kanban se não existirem
+if 'kanban_state' not in st.session_state:
+    st.session_state.kanban_state = {
+        "todo": ["Otimizar Backend (Python)", "Configurar Wav2Vec2"],
+        "doing": ["Dashboard V3 (Ultimate)"],
+        "done": ["Interface Neon", "Integração Gemini"]
+    }
 
-# --- SIDEBAR ---
-with st.sidebar:
-    st.title("📊 Status")
-    # Gráfico simples para não dar erro
-    done = len([t for t in st.session_state.kanban_db if t['status'] == 'Feito'])
-    total = len(st.session_state.kanban_db)
-    progresso = int((done/total)*100) if total > 0 else 0
-    st.metric("Progresso", f"{progresso}%")
+if 'mvp_docs' not in st.session_state:
+    st.session_state.mvp_docs = """
+    📘 DOCUMENTAÇÃO MVP (Editável)
+    --------------------------------
+    1. Arquitetura: Híbrida (Expo + Hugging Face).
+    2. IA: Gemini Pro para lógica + Wav2Vec2 para fonética.
+    3. Status: Interface pronta, falta otimizar latência.
+    """
 
-# --- ÁREA PRINCIPAL ---
-st.title("🚀 Fluentli V2 - Command Center")
+# --- 3. BARRA SUPERIOR (MÉTRICAS REAIS) ---
+st.title("🧠 Fluentli V2 - Engineering Master")
+st.markdown("**Status:** 🟢 Sistema Operante | **Versão:** Ultimate Drag & Drop")
 
-tab_draw, tab_kanban, tab_docs = st.tabs(["🎨 Quadro Branco (Livre)", "📌 Kanban Visual", "📝 Docs"])
+# Cálculo de progresso baseado no Kanban
+total_tasks = len(st.session_state.kanban_state["todo"]) + len(st.session_state.kanban_state["doing"]) + len(st.session_state.kanban_state["done"])
+done_tasks = len(st.session_state.kanban_state["done"])
+progress = int((done_tasks / total_tasks) * 100) if total_tasks > 0 else 0
+
+col1, col2, col3 = st.columns(3)
+col1.markdown(f'<div class="metric-box"><h3>🚀 Progresso</h3><h2>{progress}%</h2></div>', unsafe_allow_html=True)
+col2.markdown(f'<div class="metric-box"><h3>📝 Tarefas Totais</h3><h2>{total_tasks}</h2></div>', unsafe_allow_html=True)
+col3.markdown(f'<div class="metric-box"><h3>🔥 Sprint Atual</h3><h2>Backend Optimization</h2></div>', unsafe_allow_html=True)
+
+st.markdown("---")
+
+# --- 4. ABAS DO PROJETO ---
+tab_board, tab_kanban, tab_docs = st.tabs(["🎨 Quadro Branco (LIVRE)", "📌 Kanban (ARRASTAR E SOLTAR)", "📝 Docs (SALVAR)"])
 
 # ==============================================================================
-# ABA 1: QUADRO BRANCO (HACK DO IFRAME - ZERO ERRO)
+# ABA 1: ARQUITETURA LIVRE (EXCALIDRAW)
 # ==============================================================================
-with tab_draw:
-    st.subheader("Arquitetura Livre")
-    st.caption("Desenhe, arraste e solte livremente. Ferramenta embutida via Web.")
+with tab_board:
+    st.subheader("🛠️ Bancada de Engenharia (100% Livre)")
+    st.info("💡 DICA PRO: Pressione `Win + .` (Windows) ou `Cmd + Ctrl + Espaço` (Mac) para abrir o menu de Emojis e colar ícones de tecnologia (🐍, ⚛️, ☁️) direto no quadro.")
     
-    # AQUI ESTÁ A MÁGICA. Em vez de instalar biblioteca, usamos o site direto.
-    # Isso traz a versão COMPLETA do Excalidraw para dentro do seu app.
-    components.iframe("https://excalidraw.com/", height=800, scrolling=True)
+    # Este componente permite desenhar, arrastar, conectar linhas manualmente.
+    # Nada fixo. Você é o dono do desenho.
+    excalidraw(height=800)
 
 # ==============================================================================
-# ABA 2: KANBAN
+# ABA 2: KANBAN COM DRAG & DROP REAL
 # ==============================================================================
 with tab_kanban:
-    with st.expander("➕ Nova Tarefa"):
-        t_nome = st.text_input("Tarefa")
-        t_tag = st.selectbox("Tag", ["Dev", "Design", "Gestão"])
-        if st.button("Adicionar"):
-            st.session_state.kanban_db.append({"id": len(st.session_state.kanban_db)+1, "task": t_nome, "status": "A Fazer", "tag": t_tag})
-            st.rerun()
+    st.subheader("Gestão de Tarefas (Drag & Drop)")
+    st.caption("Arraste os itens entre as colunas. As mudanças são salvas automaticamente.")
 
-    c1, c2, c3 = st.columns(3)
+    # O componente 'sort_items' cria as listas arrastáveis
+    kanban_data = sort_items(
+        [
+            st.session_state.kanban_state["todo"],
+            st.session_state.kanban_state["doing"],
+            st.session_state.kanban_state["done"]
+        ],
+        multi_containers=True,
+        header=["🔴 A FAZER", "🟡 FAZENDO", "🟢 FEITO (CONCLUÍDO)"],
+        direction="vertical",
+        key="kanban_sortable"
+    )
+
+    # Lógica para salvar o estado depois de arrastar
+    # O componente retorna a nova lista. Atualizamos a memória.
+    if kanban_data:
+        st.session_state.kanban_state["todo"] = kanban_data[0]
+        st.session_state.kanban_state["doing"] = kanban_data[1]
+        st.session_state.kanban_state["done"] = kanban_data[2]
+
+    st.markdown("---")
     
-    # Colunas visuais
-    cols = {"A Fazer": c1, "Fazendo": c2, "Feito": c3}
-    colors = {"A Fazer": "status-todo", "Fazendo": "status-doing", "Feito": "status-done"}
-    
-    for status, col in cols.items():
-        with col:
-            st.markdown(f"### {status}")
-            for i in st.session_state.kanban_db:
-                if i['status'] == status:
-                    st.markdown(f"<div class='kanban-card {colors[status]}'><b>{i['task']}</b><br><small>{i['tag']}</small></div>", unsafe_allow_html=True)
-                    # Botões de movimento simples
-                    if status == "A Fazer" and st.button("➡️", key=f"go_{i['id']}"):
-                        i['status'] = "Fazendo"
-                        st.rerun()
-                    if status == "Fazendo" and st.button("✅", key=f"fin_{i['id']}"):
-                        i['status'] = "Feito"
-                        st.rerun()
+    # Adicionar Nova Tarefa
+    with st.expander("➕ Adicionar Nova Tarefa ao Kanban"):
+        new_task = st.text_input("Descrição da Tarefa:")
+        if st.button("Criar Card"):
+            if new_task:
+                st.session_state.kanban_state["todo"].append(new_task)
+                st.success("Tarefa adicionada em 'A Fazer'! Recarregue a página se não aparecer imediatamente.")
+                st.rerun()
 
 # ==============================================================================
-# ABA 3: DOCS
+# ABA 3: DOCUMENTAÇÃO QUE SALVA
 # ==============================================================================
 with tab_docs:
     st.subheader("Dossiê Técnico")
-    txt = st.text_area("Edite:", value=st.session_state.mvp_text, height=400)
-    if st.button("Salvar na Sessão"):
-        st.session_state.mvp_text = txt
-        st.success("Salvo!")
+    
+    # Formulário para garantir o salvamento
+    with st.form("docs_form"):
+        text_area = st.text_area("Edite o documento:", 
+                                 value=st.session_state.mvp_docs, 
+                                 height=500)
+        
+        save_btn = st.form_submit_button("💾 SALVAR DADOS MVP")
+        
+        if save_btn:
+            st.session_state.mvp_docs = text_area
+            st.success("✅ Documentação atualizada e salva na memória!")
